@@ -1,0 +1,206 @@
+[build-system]
+requires = ["setuptools >= 60.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "virne"
+version = "1.0.0"
+description = "A comprehensive simulator and benchmark for Resource Allocation in Network Function Virtualization (NFV-RA)."
+readme = "README.md"
+requires-python = ">= 3.10"
+authors = [{ name = "GeminiLight", email = "wtfly2018@gmail.com" }]
+license = { text = "Apache License, Version 2.0" }
+keywords = ["Network Function Virtualization", "Virtual Network Embedding", "Reinforcement Learning"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    'Intended Audience :: Science/Research',
+    'Topic :: Scientific/Engineering :: Artificial Intelligence',
+    'Topic :: Software Development :: Libraries',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    'Topic :: Software Development :: Libraries :: Python Libraries',
+    'Topic :: Software Development :: Libraries :: Python Frameworks',
+]
+dependencies = [
+    "gym == 0.22.0",
+    "numpy >= 1.20.0",
+    "pandas >= 1.5.3",
+    "matplotlib >= 3.7.1",
+    "scipy >= 1.9.0",
+    "pyyaml >= 6.0",
+    "torch == 2.6.0",
+    "tensorboard >= 2.8.0",
+    "wandb >= 0.12.0",
+    "higher >= 0.2.1",
+    "networkx >= 2.6.0",
+    "tqdm >= 4.62.0",
+    "ortools >= 9.1.9490",
+    "scikit-learn >= 1.0.0",
+    "colorama >= 0.4.0",
+    "hydra-core >= 1.0.0",
+    "colorlog >= 6.0.0",
+    "ortools >= 9.1.9490",
+    "scikit-learn >= 1.0.0",
+    "torch_geometric",
+    "pyg_lib @ https://data.pyg.org/whl/torch-2.6.0+cpu/pyg_lib-0.4.0+pt26cpu-cp310-cp310-linux_x86_64.whl",
+    "torch_scatter @ https://data.pyg.org/whl/torch-2.6.0+cpu/torch_scatter-2.1.2+pt26cpu-cp310-cp310-linux_x86_64.whl",
+    "torch_sparse @ https://data.pyg.org/whl/torch-2.6.0+cpu/torch_sparse-0.6.18+pt26cpu-cp310-cp310-linux_x86_64.whl",
+    "torch_cluster @ https://data.pyg.org/whl/torch-2.6.0+cpu/torch_cluster-1.6.3+pt26cpu-cp310-cp310-linux_x86_64.whl",
+    "torch_spline_conv @ https://data.pyg.org/whl/torch-2.6.0+cpu/torch_spline_conv-1.2.2+pt26cpu-cp310-cp310-linux_x86_64.whl"
+]
+
+dynamic = ["entry-points"]
+
+[project.urls]
+Homepage = "https://github.com/GeminiLight/virne"
+Repository = "https://github.com/GeminiLight/virne"
+Documentation = "https://virne.readthedocs.io"
+"Bug Report" = "https://github.com/GeminiLight/virne/issues"
+
+[project.optional-dependencies]
+lint = [
+]
+# test = ['pytest', 'pytest-cov', 'pytest-xdist']
+
+# PyG and related dependencies (choose one group depending on your hardware)
+# pyg-cpu = [
+#     "torch_geometric",
+#     "pyg_lib @ https://data.pyg.org/whl/torch-2.6.0+cpu.html",
+#     "torch_scatter @ https://data.pyg.org/whl/torch-2.6.0+cpu.html",
+#     "torch_sparse @ https://data.pyg.org/whl/torch-2.6.0+cpu.html",
+#     "torch_cluster @ https://data.pyg.org/whl/torch-2.6.0+cpu.html",
+#     "torch_spline_conv @ https://data.pyg.org/whl/torch-2.6.0+cpu.html"
+# ]
+pyg-gpu = [
+    "torch_geometric",
+    "pyg_lib @ https://data.pyg.org/whl/torch-2.6.0+cu124/pyg_lib-0.4.0+pt26cu124-cp310-cp310-linux_x86_64.whl",
+    "torch_scatter @ https://data.pyg.org/whl/torch-2.6.0+cu124/torch_scatter-2.1.2+pt26cu124-cp310-cp310-linux_x86_64.whl",
+    "torch_sparse @ https://data.pyg.org/whl/torch-2.6.0+cu124/torch_sparse-0.6.18+pt26cu124-cp310-cp310-linux_x86_64.whl",
+    "torch_cluster @ https://data.pyg.org/whl/torch-2.6.0+cu124/torch_cluster-1.6.3+pt26cu124-cp310-cp310-linux_x86_64.whl",
+    "torch_spline_conv @ https://data.pyg.org/whl/torch-2.6.0+cu124/torch_spline_conv-1.2.2+pt26cu124-cp310-cp310-linux_x86_64.whl"
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["virne", "virne.*"]
+
+# Linter tools #################################################################
+
+[tool.black]
+safe = true
+line-length = 100
+skip-string-normalization = true
+# Sync with requires-python
+# target-version = ["py38", "py39", "py310", "py311"]
+
+[tool.isort]
+atomic = true
+profile = "black"
+src_paths = ["virne", "tests"]
+extra_standard_library = ["typing_extensions"]
+indent = 4
+line_length = 100
+lines_after_imports = 2
+multi_line_output = 3
+
+[tool.mypy]
+python_version = "3.10"
+pretty = true
+show_error_codes = true
+show_error_context = true
+show_traceback = true
+allow_redefinition = true
+check_untyped_defs = true
+disallow_incomplete_defs = false
+disallow_untyped_defs = false
+ignore_missing_imports = true
+no_implicit_optional = true
+strict_equality = true
+strict_optional = true
+warn_no_return = true
+warn_redundant_casts = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[tool.pydocstyle]
+convention = "google"
+
+[tool.doc8]
+max-line-length = 500
+
+[tool.ruff]
+# Sync with requires-python
+target-version = "py38"
+line-length = 100
+show-source = true
+src = ["virne", "tests", "examples"]
+select = [
+    "E", "W",  # pycodestyle
+    "F",       # pyflakes
+    "UP",      # pyupgrade
+    "ANN",     # flake8-annotations
+    "S",       # flake8-bandit
+    "BLE",     # flake8-blind-except
+    "B",       # flake8-bugbear
+    "COM",     # flake8-commas
+    "C4",      # flake8-comprehensions
+    "EXE",     # flake8-executable
+    "ISC",     # flake8-implicit-str-concat
+    "PIE",     # flake8-pie
+    "PYI",     # flake8-pyi
+    "Q",       # flake8-quotes
+    "RSE",     # flake8-raise
+    "RET",     # flake8-return
+    "SIM",     # flake8-simplify
+    "TID",     # flake8-tidy-imports
+    "RUF",     # ruff
+]
+ignore = [
+    # E501: line too long
+    # W505: doc line too long
+    # too long docstring due to long example blocks
+    "E501",
+    "W505",
+    # TODO: Remove this four ignores
+    # ANN001: missing type annotation for function argument
+    # ANN003: missing type annotation for `**kwargs`
+    # ANN201: missing return type annotation for public function
+    # ANN202: missing return type annotation for private function
+    "ANN001","ANN003","ANN201","ANN202",
+    # ANN101: missing type annotation for `self` in method
+    # ANN102: missing type annotation for `cls` in classmethod
+    "ANN101",
+    "ANN102",
+    # ANN401: dynamically typed expressions (typing.Any) are disallowed
+    "ANN401",
+    # S101: use of `assert` detected
+    # internal use and may never raise at runtime
+    "S101",
+    # PLR0402: use from {module} import {name} in lieu of alias
+    # use alias for import convention (e.g., `import torch.nn as nn`)
+    "PLR0402",
+]
+
+[tool.ruff.flake8-annotations]
+allow-star-arg-any = true
+
+[tool.ruff.flake8-quotes]
+docstring-quotes = "double"
+multiline-quotes = "double"
+inline-quotes = "single"
+
+[tool.ruff.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "error",
+    "ignore: distutils Version classes are deprecated. Use packaging.version instead.",
+    "ignore::DeprecationWarning"
+]
