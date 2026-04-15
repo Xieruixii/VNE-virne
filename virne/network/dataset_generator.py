@@ -197,12 +197,7 @@ class Generator:
         traffic_cfg = v_sim_setting.get("traffic", {}) or {}
         type_probs: List[float] = traffic_cfg.get("type_probs", [0.3, 0.4, 0.3])
         p_delay_sensitive = float(traffic_cfg.get("p_delay_sensitive", 0.3))
-
-        m = v_net.edges[u, v].get("m", None)
-        if m is None:
-            lam = traffic_cfg.get("m_lam", 80)
-            m = int(np.random.poisson(lam))
-        v_net.edges[u, v]["m"] = m
+        lam = traffic_cfg.get("m_lam", 80)
 
         assert abs(sum(type_probs) - 1.0) < 1e-6, "traffic.type_probs must sum to 1.0"
         t1, t2, t3 = type_probs
@@ -229,6 +224,12 @@ class Generator:
                 if ds is None:
                     ds = np.random.random()
                 v_net.edges[u, v]["d"] = 1 if ds < p_delay_sensitive else 0
+
+                # message count m
+                m = v_net.edges[u, v].get("m", None)
+                if m is None:
+                    m = int(np.random.poisson(lam))
+                v_net.edges[u, v]["m"] = m
 
         # record config (optional)
         # v_net_simulator.graph.setdefault("traffic", {})
