@@ -146,6 +146,24 @@ class TestTopologyGenerator:
         """Test error with unsupported graph type."""
         with pytest.raises(NotImplementedError, match="Graph type 'unsupported' is not implemented"):
             TopologyGenerator.generate('unsupported', 5)
+
+    def test_generate_fat_tree_graph(self):
+        """Test fat-tree graph generation and metadata."""
+        G = TopologyGenerator.generate('fat_tree', num_nodes=80, k=4)
+
+        assert isinstance(G, nx.Graph)
+        assert G.number_of_nodes() == 36
+        assert nx.is_connected(G)
+        layers = {data.get('layer') for _, data in G.nodes(data=True)}
+        assert {'edge', 'agg', 'core', 'server'}.issubset(layers)
+        server_node = next(n for n, d in G.nodes(data=True) if d.get('layer') == 'server')
+        assert G.nodes[server_node]['pod_id'] >= 0
+        assert G.nodes[server_node]['rack_id'] >= 0
+
+    def test_generate_fat_tree_invalid_k(self):
+        """Test invalid fat-tree k parameter."""
+        with pytest.raises(ValueError, match="requires an even 'k' >= 2"):
+            TopologyGenerator.generate('fat_tree', num_nodes=10, k=3)
             
     def test_generate_path_single_node(self):
         """Test path graph with single node."""

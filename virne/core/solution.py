@@ -136,6 +136,13 @@ class Solution(ClassDict):
         self.selected_actions: list = []
         self.num_interactions: int = 0
         self.v_net_reward: float = 0.0
+        self.v_net_ehpc: float = 0.0
+        self.v_net_crossrack_cost: float = 0.0
+        self.v_net_delay_penalty: float = 0.0
+        self.v_net_fallback_count: int = 0
+        self.v_net_rdma_offload_count: int = 0
+        self.rdma_z: dict = {}
+        self.rdma_path_penalty: dict = {}
 
     def is_feasible(self) -> bool:
         """

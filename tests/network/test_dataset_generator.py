@@ -1,6 +1,7 @@
 import pytest
 import os
 import tempfile
+import networkx as nx
 from unittest.mock import Mock, patch, MagicMock
 from omegaconf import DictConfig, OmegaConf
 
@@ -245,6 +246,29 @@ class TestGenerator:
                         Generator.generate_v_nets_dataset_from_config(config)
                     except:
                         pass  # We're just testing that config type validation passes
+
+    def test_postprocess_p_net_rdma_server_only_fat_tree(self):
+        p_net = nx.Graph()
+        p_net.add_node(0, layer='server', rdma_score=0.1, rdma_budget=8)
+        p_net.add_node(1, layer='server', rdma_score=0.9, rdma_budget=8)
+        p_net.add_node(2, layer='edge', rdma_score=0.1, rdma_budget=8)
+        p_net_setting = {
+            'rdma': {
+                'p_rdma': 0.5,
+                'k_rdma': 8,
+                'deployment_model': 'pod_local',
+                'cross_pod_penalty': 1.0,
+            }
+        }
+
+        Generator._postprocess_p_net_rdma(p_net, p_net_setting)
+
+        assert p_net.nodes[0]['rdma_capable'] == 1
+        assert p_net.nodes[1]['rdma_capable'] == 0
+        assert p_net.nodes[2]['rdma_capable'] == 0
+        assert p_net.nodes[2]['rdma_budget'] == 0
+        assert p_net.graph['rdma']['deployment_model'] == 'pod_local'
+        assert p_net.graph['rdma']['cross_pod_penalty'] == 1.0
 
 
 if __name__ == '__main__':

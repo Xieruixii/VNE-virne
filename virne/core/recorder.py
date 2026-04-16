@@ -96,7 +96,12 @@ class Recorder:
             'total_time_cost': 0,
             'long_term_r2c_ratio': 0,
             'long_term_time_r2c_ratio': 0,
-            'num_running_p_net_nodes': 0
+            'num_running_p_net_nodes': 0,
+            'total_ehpc': 0.0,
+            'total_crossrack_cost': 0.0,
+            'total_delay_penalty': 0.0,
+            'total_fallback_count': 0,
+            'fallback_rate': 0.0,
         }
         if self.if_temp_save_records:
             suffixes = 0
@@ -186,6 +191,11 @@ class Recorder:
         elif self.state['event_type'] == 1:
             self.v_net_event_dict[solution['v_net_id']] = self.state['event_id']
             self.state['v_net_count'] += 1
+            self.state['total_ehpc'] += float(solution.get('v_net_ehpc', 0.0))
+            self.state['total_crossrack_cost'] += float(solution.get('v_net_crossrack_cost', 0.0))
+            self.state['total_delay_penalty'] += float(solution.get('v_net_delay_penalty', 0.0))
+            self.state['total_fallback_count'] += int(solution.get('v_net_fallback_count', 0))
+            self.state['fallback_rate'] = self.state['total_fallback_count'] / self.state['v_net_count'] if self.state['v_net_count'] else 0.0
             # Success
             if solution['result']:
                 self.state['success_count'] += 1

@@ -42,12 +42,13 @@
 rdma:
   p_rdma: 0.5
   k_rdma: 8
+  deployment_model: pod_local
+  cross_pod_penalty: 1.0
 
 topology:
-  num_nodes: 100
-  type: waxman
-  wm_alpha: 0.5
-  wm_beta: 0.2
+  num_nodes: 80
+  type: fat_tree
+  k: 8
 
 node_attrs_setting:
   - name: cpu
