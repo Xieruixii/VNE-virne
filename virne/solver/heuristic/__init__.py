@@ -2,6 +2,7 @@ from .bfs_trials import RandomRankBfsSolver, RandomWalkRankBfsSolver, OrderRankB
 from .node_rank import BaseNodeRankSolver, GRCRankSolver, FFDRankSolver,RandomRankSolver, PLRankSolver, \
                         OrderRankSolver, RandomWalkRankSolver, NRMRankSolver
 from .rdma_always_offload import RDMAAlwaysOffloadSolver
+from .rdma_opportunistic import RDMAOpportunisticSolver
 
 __all__ = [
     'OrderRankBfsSolver',
@@ -15,5 +16,6 @@ __all__ = [
     'RandomWalkRankSolver',
     'NRMRankSolver',
     'RandomRankSolver',
-    'RDMAAlwaysOffloadSolver'
+    'RDMAAlwaysOffloadSolver',
+    'RDMAOpportunisticSolver'
 ]

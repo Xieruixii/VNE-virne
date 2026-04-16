@@ -167,9 +167,17 @@ class Generator:
         rdma_cfg = p_net_setting.get("rdma", {}) or {}
         p_rdma = float(rdma_cfg.get("p_rdma", 0.5))
         k_rdma = int(rdma_cfg.get("k_rdma", 8))
+        deployment_model = str(rdma_cfg.get("deployment_model", "pod_local"))
+        cross_pod_penalty = float(rdma_cfg.get("cross_pod_penalty", 1.0))
+        has_server_layer = any(p_net.nodes[n].get("layer") == "server" for n in p_net.nodes)
 
         # If rdma_score exists, threshold it. Otherwise, sample here (fallback).
         for n in p_net.nodes:
+            if has_server_layer and p_net.nodes[n].get("layer") != "server":
+                p_net.nodes[n]["rdma_capable"] = 0
+                p_net.nodes[n]["rdma_budget"] = 0
+                p_net.nodes[n]["rdma_budget_free"] = 0
+                continue
             score = p_net.nodes[n].get("rdma_score", None)
             if score is None:
                 score = np.random.random()
@@ -187,7 +195,14 @@ class Generator:
 
         # Also record config onto graph for later analysis/recorder
         p_net.graph.setdefault("rdma", {})
-        p_net.graph["rdma"].update({"p_rdma": p_rdma, "k_rdma": k_rdma})
+        p_net.graph["rdma"].update(
+            {
+                "p_rdma": p_rdma,
+                "k_rdma": k_rdma,
+                "deployment_model": deployment_model,
+                "cross_pod_penalty": cross_pod_penalty,
+            }
+        )
 
     @staticmethod
     def _postprocess_v_nets_traffic(v_net_simulator: VirtualNetworkRequestSimulator, v_sim_setting: dict):
