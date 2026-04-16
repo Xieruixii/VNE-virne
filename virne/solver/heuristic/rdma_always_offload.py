@@ -87,7 +87,7 @@ class RDMAAlwaysOffloadSolver(BaseNodeRankSolver):
             try:
                 v_net.links[(u, v)]["z"] = z
                 v_net.links[(u, v)]["rdma_path_penalty"] = rdma_penalties[(u, v)]
-            except Exception:
+            except KeyError:
                 pass
 
         solution["rdma_z"] = rdma_decisions
