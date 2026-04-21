@@ -48,6 +48,7 @@ class BaseSystem:
         self.counter = counter
         self.logger = logger
         self.config = config
+        self.epoch_id: int = 0
 
     @classmethod
     def from_config(cls, config):
@@ -165,8 +166,9 @@ class OnlineSystem(BaseSystem):
         self.ready()
         for epoch_id in range(self.config.experiment.num_simulations):
             self.logger.info(f'Epoch {epoch_id}')
-            self.env.epoch_id = epoch_id
-            self.solver.epoch_id = epoch_id
+            setattr(self.env, 'epoch_id', epoch_id)
+            if hasattr(self.solver, 'epoch_id'):
+                self.solver.epoch_id = epoch_id
 
             instance = self.env.reset(self.config.experiment.seed)
 
@@ -197,12 +199,13 @@ class ChangeableSystem(BaseSystem):
 
         for epoch_id in range(self.config.experiment.num_simulations):
             self.logger.info(f'Epoch {epoch_id}')
-            self.env.epoch_id = epoch_id
-            self.solver.epoch_id = epoch_id
+            setattr(self.env, 'epoch_id', epoch_id)
+            if hasattr(self.solver, 'epoch_id'):
+                self.solver.epoch_id = epoch_id
             instance = self.env.reset(self.config.experiment.seed)
 
             self.env.v_net_simulator = Generator.generate_changeable_v_nets_dataset_from_config(self.config, save=False)
-            self.logger.info([v.num_nodes for v in self.env.v_net_simulator.v_nets])
+            self.logger.info(str([v.num_nodes for v in self.env.v_net_simulator.v_nets]))
             self.get_process_bar(epoch_id)
             while True:
                 solution = self.solver.solve(instance)
@@ -257,8 +260,9 @@ class OfflineSystem(BaseSystem):
 
         for epoch_id in range(self.config.experiment.num_simulations):
             self.logger.info(f'Epoch {epoch_id}')
-            self.env.epoch_id = epoch_id
-            self.solver.epoch_id = epoch_id
+            setattr(self.env, 'epoch_id', epoch_id)
+            if hasattr(self.solver, 'epoch_id'):
+                self.solver.epoch_id = epoch_id
 
             instance = self.env.reset(self.config.experiment.seed)
             self.p_net_init = copy.deepcopy(self.env.p_net)
@@ -299,11 +303,11 @@ class TimeWindowSystem(BaseSystem):
         next_time_window = self.current_time_window + self.time_window_size
         enter_event_list = []
         leave_event_list = []
-        while self.next_event_id < len(self.v_net_simulator.events) and self.v_net_simulator.events[self.next_event_id]['time'] <= next_time_window:
-            if self.v_net_simulator.events[self.next_event_id]['type'] == 1:
-                enter_event_list.append(self.v_net_simulator.events[self.next_event_id])
+        while self.next_event_id < len(self.env.v_net_simulator.events) and self.env.v_net_simulator.events[self.next_event_id]['time'] <= next_time_window:
+            if self.env.v_net_simulator.events[self.next_event_id]['type'] == 1:
+                enter_event_list.append(self.env.v_net_simulator.events[self.next_event_id])
             else:
-                leave_event_list.append(self.v_net_simulator.events[self.next_event_id])
+                leave_event_list.append(self.env.v_net_simulator.events[self.next_event_id])
             self.next_event_id += 1
         return enter_event_list, leave_event_list
 
@@ -315,7 +319,7 @@ class TimeWindowSystem(BaseSystem):
         
         for epoch_id in range(self.config.experiment.num_simulations):
             self.logger.info(f'Epoch {epoch_id}')
-            pbar = tqdm.tqdm(desc=f'Running with {self.solver.name} in epoch {epoch_id}', total=self.env.v_net_simulator.num_v_nets)
+            pbar = tqdm.tqdm(desc=f'Running with {self.config.solver.solver_name} in epoch {epoch_id}', total=self.env.v_net_simulator.num_v_nets)
             instance = self.env.reset(self.config.experiment.seed)
 
             current_event_id = 0
@@ -329,11 +333,9 @@ class TimeWindowSystem(BaseSystem):
                     # leave
                     else:
                         v_net_id = events_list[current_event_id]['v_net_id']
-                        solution = Solution(self.v_net_simulator.v_nets[v_net_id])
+                        solution = Solution(self.env.v_net_simulator.v_nets[v_net_id])
                         solution = self.recorder.get_record(v_net_id=v_net_id)
-                        self.controller.release(self.v_net_simulator.v_nets[v_net_id], self.p_net, solution)
-                        self.solution['description'] = 'Leave Event'
-                        record = self.count_and_add_record()
+                        self.controller.release(self.env.v_net_simulator.v_nets[v_net_id], self.env.p_net, solution)
                     current_event_id += 1
 
                 for enter_event in  enter_event_list:

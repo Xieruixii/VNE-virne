@@ -8,12 +8,10 @@ from ortools.linear_solver import pywraplp
 
 import pprint
 
-import torch
-  
 from virne.core import Solution
 from virne.core.environment import SolutionStepEnvironment
 from virne.solver.base_solver import Solver, SolverRegistry
-#cuda_suffix = "cuda" if torch.cuda.is_available() else "cpu"
+
 
 @SolverRegistry.register(solver_name='mip', solver_type='exact')
 class MipSolver(Solver):

@@ -1,0 +1,31 @@
+solver_name: rdma_rank
+verbose: 1
+
+# 基本行为
+reusable: false
+allow_rejection: true
+allow_revocable: false
+
+# 排序策略（环境和基类都会读）
+node_ranking_method: nrm
+link_ranking_method: order
+
+# 节点映射 / 链路映射
+matching_mathod: greedy
+shortest_method: k_shortest
+k_shortest: 3
+
+# 你自己的 RDMA 参数
+alpha_host: 1.0
+beta_lat: 1.0
+gamma_nic: 1.0
+offload_threshold: 1.0
+
+w_base: 1.0
+w_nic: 0.8
+w_neighbor: 1.2
+w_rdma_pair: 1.5
+
+rdma_margin: 1.0
+lambda_nic_scarcity: 1.0
+lambda_slack: 0.05

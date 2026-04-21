@@ -74,6 +74,16 @@ class InformationAttributeMethod:
         super().__init__(*args, **kwargs)
         self.is_constraint: bool = False
 
+    def generate_data(self, network: Any) -> Any:
+        generative = getattr(self, 'generative', False)
+        if generative:
+            gen_func = getattr(self, '_generate_data', None)
+            if not callable(gen_func):
+                raise NotImplementedError("InformationAttributeMethod requires '_generate_data' method in the main class for generative attributes.")
+            return gen_func(network)
+        else:
+            raise NotImplementedError("Non-generative information attribute must implement generate_data.")
+
 
 class ConstraintAttributeMethod:
     """

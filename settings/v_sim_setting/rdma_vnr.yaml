@@ -1,0 +1,56 @@
+# settings/v_sim_setting/rdma_vnr.yaml
+
+num_v_nets: 2000
+
+arrival_rate: 0.08
+
+lifetime:
+  distribution: 'exponential'
+  scale: 500
+
+topology:
+  type: 'erdos_renyi'
+  num_v_nodes:
+    distribution: 'uniform'
+    low: 2
+    high: 10
+  edge_probability: 0.5
+
+v_node_attrs_setting:
+  - name: 'cpu'
+    distribution: 'uniform'
+    low: 0
+    high: 20
+
+v_link_attrs_setting:
+  - name: 'bw'
+    distribution: 'uniform'
+    low: 1
+    high: 50
+
+  # 业务消息频率：驱动 EHPC / offload utility
+  - name: 'msg_rate'
+    distribution: 'uniform'
+    low: 1
+    high: 10
+
+  # 是否时延敏感：0/1
+  - name: 'delay_sensitive'
+    distribution: 'bernoulli'
+    p: 0.3
+    value_if_true: 1
+    value_if_false: 0
+
+  # 流类型标签：建议后处理映射为 1/2/3
+  - name: 'flow_type'
+    distribution: 'choice'
+    choices: [1, 2, 3]
+    probs: [0.3, 0.4, 0.3]
+
+  # 可选：端到端时延需求
+  - name: 'latency'
+    distribution: 'uniform'
+    low: 2
+    high: 15
+
+v_net_attrs_setting: []

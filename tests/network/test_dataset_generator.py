@@ -1,7 +1,6 @@
 import pytest
 import os
 import tempfile
-import networkx as nx
 from unittest.mock import Mock, patch, MagicMock
 from omegaconf import DictConfig, OmegaConf
 
@@ -99,10 +98,9 @@ class TestGenerator:
         mock_v_nets.assert_not_called()
         
     @patch('virne.utils.dataset.set_seed')
-    @patch('virne.network.dataset_generator.Generator._postprocess_p_net_rdma')
     @patch('virne.network.physical_network.PhysicalNetwork.from_setting')
     @patch('virne.utils.get_p_net_dataset_dir_from_setting')
-    def test_generate_p_net_dataset_from_config(self, mock_get_dir, mock_from_setting, mock_postprocess, mock_set_seed):
+    def test_generate_p_net_dataset_from_config(self, mock_get_dir, mock_from_setting, mock_set_seed):
         """Test generating physical network dataset from config."""
         mock_p_net = Mock(spec=PhysicalNetwork)
         mock_p_net.save_dataset = Mock()
@@ -114,14 +112,12 @@ class TestGenerator:
         assert result == mock_p_net
         # mock_set_seed.assert_called_once_with(42)
         mock_from_setting.assert_called_once_with(self.basic_config['p_net_setting'])
-        mock_postprocess.assert_called_once_with(mock_p_net, self.basic_config['p_net_setting'])
         mock_p_net.save_dataset.assert_not_called()  # save=False
         
     @patch('virne.utils.dataset.set_seed')
-    @patch('virne.network.dataset_generator.Generator._postprocess_p_net_rdma')
     @patch('virne.network.physical_network.PhysicalNetwork.from_setting')
     @patch('virne.utils.get_p_net_dataset_dir_from_setting')
-    def test_generate_p_net_dataset_from_config_with_save(self, mock_get_dir, mock_from_setting, mock_postprocess, mock_set_seed):
+    def test_generate_p_net_dataset_from_config_with_save(self, mock_get_dir, mock_from_setting, mock_set_seed):
         """Test generating and saving physical network dataset."""
         mock_p_net = Mock(spec=PhysicalNetwork)
         mock_p_net.save_dataset = Mock()
@@ -131,7 +127,6 @@ class TestGenerator:
         result = Generator.generate_p_net_dataset_from_config(self.basic_config, save=True)
         
         assert result == mock_p_net
-        mock_postprocess.assert_called_once_with(mock_p_net, self.basic_config['p_net_setting'])
         mock_p_net.save_dataset.assert_called_once_with(get_p_net_dataset_dir_from_setting(self.basic_config['p_net_setting']))
         
     def test_generate_p_net_dataset_missing_p_net_setting(self):
@@ -141,10 +136,9 @@ class TestGenerator:
             Generator.generate_p_net_dataset_from_config(config)
             
     @patch('virne.utils.dataset.set_seed')
-    @patch('virne.network.dataset_generator.Generator._postprocess_v_nets_traffic')
     @patch('virne.network.virtual_network_request_simulator.VirtualNetworkRequestSimulator.from_setting')
     @patch('virne.utils.get_v_nets_dataset_dir_from_setting')
-    def test_generate_v_nets_dataset_from_config(self, mock_get_dir, mock_from_setting, mock_postprocess, mock_set_seed):
+    def test_generate_v_nets_dataset_from_config(self, mock_get_dir, mock_from_setting, mock_set_seed):
         """Test generating virtual network dataset from config."""
         mock_v_sim = Mock(spec=VirtualNetworkRequestSimulator)
         mock_v_sim.renew = Mock()
@@ -157,14 +151,12 @@ class TestGenerator:
         # mock_set_seed.assert_called_once_with(42)
         mock_from_setting.assert_called_once_with(self.basic_config['v_sim_setting'])
         mock_v_sim.renew.assert_called_once()
-        mock_postprocess.assert_called_once_with(mock_v_sim, self.basic_config['v_sim_setting'])
         mock_v_sim.save_dataset.assert_not_called()  # save=False
         
     @patch('virne.utils.dataset.set_seed')
-    @patch('virne.network.dataset_generator.Generator._postprocess_v_nets_traffic')
     @patch('virne.network.virtual_network_request_simulator.VirtualNetworkRequestSimulator.from_setting')
     @patch('virne.utils.get_v_nets_dataset_dir_from_setting')
-    def test_generate_v_nets_dataset_from_config_with_save(self, mock_get_dir, mock_from_setting, mock_postprocess, mock_set_seed):
+    def test_generate_v_nets_dataset_from_config_with_save(self, mock_get_dir, mock_from_setting, mock_set_seed):
         """Test generating and saving virtual network dataset."""
         mock_v_sim = Mock(spec=VirtualNetworkRequestSimulator)
         mock_v_sim.renew = Mock()
@@ -175,7 +167,6 @@ class TestGenerator:
         result = Generator.generate_v_nets_dataset_from_config(self.basic_config, save=True)
         
         assert result == mock_v_sim
-        mock_postprocess.assert_called_once_with(mock_v_sim, self.basic_config['v_sim_setting'])
         mock_v_sim.save_dataset.assert_called_once_with(get_v_nets_dataset_dir_from_setting(self.basic_config['v_sim_setting']))
 
     def test_generate_v_nets_dataset_missing_v_sim_setting(self):
@@ -246,29 +237,6 @@ class TestGenerator:
                         Generator.generate_v_nets_dataset_from_config(config)
                     except:
                         pass  # We're just testing that config type validation passes
-
-    def test_postprocess_p_net_rdma_server_only_fat_tree(self):
-        p_net = nx.Graph()
-        p_net.add_node(0, layer='server', rdma_score=0.1, rdma_budget=8)
-        p_net.add_node(1, layer='server', rdma_score=0.9, rdma_budget=8)
-        p_net.add_node(2, layer='edge', rdma_score=0.1, rdma_budget=8)
-        p_net_setting = {
-            'rdma': {
-                'p_rdma': 0.5,
-                'k_rdma': 8,
-                'deployment_model': 'pod_local',
-                'cross_pod_penalty': 1.0,
-            }
-        }
-
-        Generator._postprocess_p_net_rdma(p_net, p_net_setting)
-
-        assert p_net.nodes[0]['rdma_capable'] == 1
-        assert p_net.nodes[1]['rdma_capable'] == 0
-        assert p_net.nodes[2]['rdma_capable'] == 0
-        assert p_net.nodes[2]['rdma_budget'] == 0
-        assert p_net.graph['rdma']['deployment_model'] == 'pod_local'
-        assert p_net.graph['rdma']['cross_pod_penalty'] == 1.0
 
 
 if __name__ == '__main__':

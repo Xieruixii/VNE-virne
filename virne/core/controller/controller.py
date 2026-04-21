@@ -116,8 +116,8 @@ class Controller:
         self.node_constraint_attrs_checking_at_node = [n_attr for n_attr in self.all_node_attrs if n_attr.is_constraint and n_attr.checking_level == 'node']
         self.link_constraint_attrs_checking_at_link = [l_attr for l_attr in self.all_link_attrs if l_attr.is_constraint and l_attr.checking_level == 'link']
         self.link_constraint_attrs_checking_at_path = [l_attr for l_attr in self.all_link_attrs if l_attr.is_constraint and l_attr.checking_level == 'path']
-        self.hard_constraint_attrs = [attr for attr in self.all_node_attrs + self.all_link_attrs if attr.constraint_restrictions == 'hard']
-        self.soft_constraint_attrs = [attr for attr in self.all_node_attrs + self.all_link_attrs if attr.constraint_restrictions == 'soft']
+        self.hard_constraint_attrs = [attr for attr in self.all_node_attrs + self.all_link_attrs if getattr(attr, 'constraint_restrictions', None) == 'hard']
+        self.soft_constraint_attrs = [attr for attr in self.all_node_attrs + self.all_link_attrs if getattr(attr, 'constraint_restrictions', None) == 'soft']
         self.hard_constraint_attrs_names = [attr.name for attr in self.hard_constraint_attrs]
         self.soft_constraint_attrs_names = [attr.name for attr in self.soft_constraint_attrs]
         self.reusable = config.get('reusable', False)

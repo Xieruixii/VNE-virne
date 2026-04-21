@@ -127,8 +127,8 @@ class Solution(ClassDict):
             'path_level': {},
         }
         self.v_net_single_step_violation_list: list = []
-        self.v_net_single_step_hard_constraint_offset: float = float('-inf')
-        self.v_net_max_single_step_hard_constraint_violation: float = float('-inf')
+        self.v_net_single_step_hard_constraint_offset: float = 0.0
+        self.v_net_max_single_step_hard_constraint_violation: float = 0.0
         self.place_result: bool = True
         self.route_result: bool = True
         self.early_rejection: bool = False
@@ -136,13 +136,6 @@ class Solution(ClassDict):
         self.selected_actions: list = []
         self.num_interactions: int = 0
         self.v_net_reward: float = 0.0
-        self.v_net_ehpc: float = 0.0
-        self.v_net_crossrack_cost: float = 0.0
-        self.v_net_delay_penalty: float = 0.0
-        self.v_net_fallback_count: int = 0
-        self.v_net_rdma_offload_count: int = 0
-        self.rdma_z: dict = {}
-        self.rdma_path_penalty: dict = {}
 
     def is_feasible(self) -> bool:
         """

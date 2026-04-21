@@ -188,7 +188,7 @@ class BaseNetwork(nx.Graph):
     @property
     def adjacency_matrix(self):
         """Get the adjacency matrix of Network."""
-        return nx.to_scipy_sparse_matrix(self, format='csr')
+        return nx.to_scipy_sparse_array(self, format='csr')
 
     ### Attributes ###
     def get_graph_attrs(self, names):
@@ -359,8 +359,8 @@ class BaseNetwork(nx.Graph):
     ### other ###
     def subgraph(self, nodes):
         subnet = super().subgraph(nodes)
-        subnet.node_attrs = self.node_attrs
-        subnet.link_attrs = self.link_attrs
+        setattr(subnet, "node_attrs", self.node_attrs)
+        setattr(subnet, "link_attrs", self.link_attrs)
         return subnet
 
     def subnetwork(self, nodes):

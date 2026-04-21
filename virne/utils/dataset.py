@@ -90,19 +90,7 @@ def get_p_net_dataset_dir_from_setting(p_net_setting, seed: Optional[int] = None
     if 'file_path' in p_net_setting['topology'] and p_net_setting['topology']['file_path'] not in ['', None, 'None'] and os.path.exists(p_net_setting['topology']['file_path']):
         p_net_name = f"{os.path.basename(p_net_setting['topology']['file_path']).split('.')[0]}"
     else:
-        topology = p_net_setting['topology']
-        topology_type = topology.get('type', 'unknown')
-        if topology_type == 'waxman':
-            topology_params = f"[{topology.get('wm_alpha')}-{topology.get('wm_beta')}]"
-        elif topology_type == 'fat_tree':
-            topology_params = f"[k={topology.get('k', 'None')}]"
-        else:
-            extra_params = [
-                f"{k}={v}" for k, v in topology.items()
-                if k not in ['num_nodes', 'type', 'file_path']
-            ]
-            topology_params = f"[{'-'.join(extra_params)}]" if extra_params else "[None]"
-        p_net_name = f"{topology.get('num_nodes', 'None')}-{topology_type}_{topology_params}"
+        p_net_name = f"{p_net_setting['topology']['num_nodes']}-{p_net_setting['topology']['type']}_[{p_net_setting['topology']['wm_alpha']}-{p_net_setting['topology']['wm_beta']}]"
     node_attrs_str = '-'.join([f'{n_attr_setting["name"]}_{get_parameters_string(get_distribution_parameters(n_attr_setting))}' for n_attr_setting in p_net_setting['node_attrs_setting']])
     link_attrs_str = '-'.join([f'{e_attr_setting["name"]}_{get_parameters_string(get_distribution_parameters(e_attr_setting))}' for e_attr_setting in p_net_setting['link_attrs_setting']])
     p_net_dataset_middir = p_net_name + '-' + node_attrs_str + '-' + link_attrs_str

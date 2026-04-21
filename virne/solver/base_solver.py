@@ -43,7 +43,9 @@ class Solver:
         self.logger = logger
         self.config = config
 
-        self.seed = self.config.experiment.seed  # None
+        self.seed = self.config.experiment.seed
+        self.epoch_id: int = 0   # <- 加这一行
+
         self.verbose = kwargs.get('verbose', 1)
         self.num_arrived_v_nets = 0
         solver_name = self.config.solver.solver_name
@@ -51,17 +53,14 @@ class Solver:
         base_save_dir = self.config.experiment.save_root_dir
         self.save_dir = os.path.join(base_save_dir, solver_name, run_id)
 
-        self.reusable = self.config.solver.reusable  # False
-        # ranking strategy
+        self.reusable = self.config.solver.reusable
         self.node_rank = None
         self.link_rank = None
         self.node_ranking_method = self.config.solver.node_ranking_method
         self.link_ranking_method = self.config.solver.link_ranking_method
-        # node mapping
         self.matching_mathod = self.config.solver.matching_mathod
         self.shortest_method = self.config.solver.shortest_method
         self.k_shortest = self.config.solver.k_shortest
-        # action
         self.allow_rejection = self.config.solver.allow_rejection
         self.allow_revocable = self.config.solver.allow_revocable
 

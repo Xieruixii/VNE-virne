@@ -1,0 +1,2 @@
+solver_name,reward_calculator_name,feature_constructor_used_features,run_id,num_train_epochs
+rdma_rank,fixed_intermediate_0.1,[_status_aggr_degree_moretopo],rdma_rank_fixed_100,50

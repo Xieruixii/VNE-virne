@@ -43,13 +43,13 @@ class NodeStatusAttribute(InformationAttributeMethod, NodeAttribute):
         super().__init__(name, 'node', 'status', **config, **kwargs)
 
 
-class NodeInfoAttribute(InformationAttributeMethod, NodeAttribute):
+class NodeInformationAttribute(InformationAttributeMethod, NodeAttribute):
     """
-    Generic node information attribute (e.g., scores, tags, metadata).
+    Node information attribute that can be generated but is not a resource constraint.
     """
     def __init__(self, name: str, config: Optional[dict] = None, **kwargs):
         config = config or {}
-        super().__init__(name, 'node', 'info', **config, **kwargs)
+        super().__init__(name, 'node', 'information', **config, **kwargs)
 
 
 class NodeExtremaAttribute(ExtremaAttributeMethod, InformationAttributeMethod, NodeAttribute):

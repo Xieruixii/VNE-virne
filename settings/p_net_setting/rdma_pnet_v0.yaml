@@ -1,11 +1,9 @@
-# Physical Network Configuration
-#settings/p_net_setting/default.yaml
+#settings/p_net_setting/rdma_pnet.yaml
 topology:
-  num_nodes: 100           # Number of nodes in the physical network
-  type: waxman             # Topology type: waxman, random, etc.
-  wm_alpha: 0.5            # Waxman alpha parameter
-  wm_beta: 0.2             # Waxman beta parameter
-  # file_path: './datasets/topology/Geant.gml'  # Uncomment to use a specific topology file
+  num_nodes: 100
+  type: waxman
+  wm_alpha: 0.5
+  wm_beta: 0.2
 
 node_attrs_setting:
   - name: cpu
@@ -17,13 +15,22 @@ node_attrs_setting:
     low: 50
     high: 100
 
+  - name: rdma_capable
+    type: information
+    owner: node
+    distribution: uniform
+    dtype: int
+    generative: true
+    low: 0
+    high: 1
+
   - name: nic_slots
     type: resource
     owner: node
     distribution: uniform
     dtype: int
     generative: true
-    low: 0
+    low: 4
     high: 8
 
   - name: qp_budget
@@ -32,8 +39,17 @@ node_attrs_setting:
     distribution: uniform
     dtype: int
     generative: true
+    low: 16
+    high: 64
+
+  - name: rack_id
+    type: information
+    owner: node
+    distribution: uniform
+    dtype: int
+    generative: true
     low: 0
-    high: 32
+    high: 9
 
 link_attrs_setting:
   - name: bw
@@ -48,10 +64,22 @@ link_attrs_setting:
   - name: latency
     type: latency
     owner: link
-    generative: true
     distribution: uniform
-    min: 1
-    max: 5
+    dtype: float
+    generative: true
+    low: 1
+    high: 5
+
+  - name: rdma_link
+    type: information
+    owner: link
+    distribution: uniform
+    dtype: int
+    generative: true
+    low: 0
+    high: 1
+
+graph_attrs_setting:
 
 output:
   save_dir: dataset/p_net

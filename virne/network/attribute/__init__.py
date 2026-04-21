@@ -12,10 +12,10 @@ from .attribute_benchmark_manager import AttributeBenchmarkManager, AttributeBen
 
 ATTRIBUTES_DICT = {
     # Information
-    ('node', 'info'): NodeInfoAttribute,
-    ('link', 'info'): LinkInfoAttribute,
     ('node', 'status'): NodeStatusAttribute,
     ('link', 'status'): LinkStatusAttribute,
+    ('node', 'information'): NodeInformationAttribute,
+    ('link', 'information'): LinkInformationAttribute,
     ('node', 'extrema'): NodeExtremaAttribute,
     ('link', 'extrema'): LinkExtremaAttribute,
     # Resource Constraints

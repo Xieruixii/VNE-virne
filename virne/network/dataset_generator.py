@@ -4,7 +4,7 @@
 
 import copy
 import random
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional, Union
 import numpy as np
 from omegaconf import DictConfig, OmegaConf
 from torch import seed
@@ -52,8 +52,6 @@ class Generator:
 
         p_net_setting = config.get('p_net_setting', {})
         p_net = PhysicalNetwork.from_setting(p_net_setting)
-        # RDMA postprocess
-        Generator._postprocess_p_net_rdma(p_net, p_net_setting)
         if save:
             p_net_dataset_dir = get_p_net_dataset_dir_from_setting(p_net_setting)
             p_net.save_dataset(p_net_dataset_dir)
@@ -75,10 +73,8 @@ class Generator:
         assert 'v_sim_setting' in config, "config must contain 'v_sim_setting' key"
         set_seed(config.get('seed', None))
         v_sim_setting = config.get('v_sim_setting', {})
-        # traffic postprocess
         v_net_simulator = VirtualNetworkRequestSimulator.from_setting(v_sim_setting)
         v_net_simulator.renew()
-        Generator._postprocess_v_nets_traffic(v_net_simulator, v_sim_setting)
         if save:
             v_nets_dataset_dir = get_v_nets_dataset_dir_from_setting(v_sim_setting)
             v_net_simulator.save_dataset(v_nets_dataset_dir)
@@ -158,94 +154,3 @@ class Generator:
             v_nets_dataset_dir = get_v_nets_dataset_dir_from_setting(v_sim_setting_temp)
             v_net_simulator.save_dataset(v_nets_dataset_dir)
         return v_net_simulator
-    
-    @staticmethod
-    def _postprocess_p_net_rdma(p_net: PhysicalNetwork, p_net_setting: dict):
-        """
-        Create rdma_capable and normalize rdma_budget based on rdma_score and config.
-        """
-        rdma_cfg = p_net_setting.get("rdma", {}) or {}
-        p_rdma = float(rdma_cfg.get("p_rdma", 0.5))
-        k_rdma = int(rdma_cfg.get("k_rdma", 8))
-        deployment_model = str(rdma_cfg.get("deployment_model", "pod_local"))
-        cross_pod_penalty = float(rdma_cfg.get("cross_pod_penalty", 1.0))
-        has_server_layer = any(p_net.nodes[n].get("layer") == "server" for n in p_net.nodes)
-
-        # If rdma_score exists, threshold it. Otherwise, sample here (fallback).
-        for n in p_net.nodes:
-            if has_server_layer and p_net.nodes[n].get("layer") != "server":
-                p_net.nodes[n]["rdma_capable"] = 0
-                p_net.nodes[n]["rdma_budget"] = 0
-                p_net.nodes[n]["rdma_budget_free"] = 0
-                continue
-            score = p_net.nodes[n].get("rdma_score", None)
-            if score is None:
-                score = np.random.random()
-
-            rdma_capable = 1 if score < p_rdma else 0
-            p_net.nodes[n]["rdma_capable"] = rdma_capable
-
-            # set budget
-            if rdma_capable:
-                p_net.nodes[n]["rdma_budget"] = int(p_net.nodes[n].get("rdma_budget", k_rdma))
-                p_net.nodes[n]["rdma_budget_free"] = int(p_net.nodes[n].get("rdma_budget_free", p_net.nodes[n]["rdma_budget"]))
-            else:
-                p_net.nodes[n]["rdma_budget"] = 0
-                p_net.nodes[n]["rdma_budget_free"] = 0
-
-        # Also record config onto graph for later analysis/recorder
-        p_net.graph.setdefault("rdma", {})
-        p_net.graph["rdma"].update(
-            {
-                "p_rdma": p_rdma,
-                "k_rdma": k_rdma,
-                "deployment_model": deployment_model,
-                "cross_pod_penalty": cross_pod_penalty,
-            }
-        )
-
-    @staticmethod
-    def _postprocess_v_nets_traffic(v_net_simulator: VirtualNetworkRequestSimulator, v_sim_setting: dict):
-        """
-        Map type_score -> traffic_type and d_score -> d for each virtual network link.
-        """
-        traffic_cfg = v_sim_setting.get("traffic", {}) or {}
-        type_probs: List[float] = traffic_cfg.get("type_probs", [0.3, 0.4, 0.3])
-        p_delay_sensitive = float(traffic_cfg.get("p_delay_sensitive", 0.3))
-        lam = traffic_cfg.get("m_lam", 80)
-
-        assert abs(sum(type_probs) - 1.0) < 1e-6, "traffic.type_probs must sum to 1.0"
-        t1, t2, t3 = type_probs
-        b1 = t1
-        b2 = t1 + t2
-
-        # v_net_simulator.v_nets is a list of VirtualNetwork objects
-        for v_net in v_net_simulator.v_nets:
-            for u, v in v_net.edges:
-                # traffic_type
-                ts = v_net.edges[u, v].get("type_score", None)
-                if ts is None:
-                    ts = np.random.random()
-                if ts < b1:
-                    traffic_type = 1
-                elif ts < b2:
-                    traffic_type = 2
-                else:
-                    traffic_type = 3
-                v_net.edges[u, v]["traffic_type"] = traffic_type
-
-                # delay sensitivity d
-                ds = v_net.edges[u, v].get("d_score", None)
-                if ds is None:
-                    ds = np.random.random()
-                v_net.edges[u, v]["d"] = 1 if ds < p_delay_sensitive else 0
-
-                # message count m
-                m = v_net.edges[u, v].get("m", None)
-                if m is None:
-                    m = int(np.random.poisson(lam))
-                v_net.edges[u, v]["m"] = m
-
-        # record config (optional)
-        # v_net_simulator.graph.setdefault("traffic", {})
-        # v_net_simulator.graph["traffic"].update({"type_probs": type_probs, "p_delay_sensitive": p_delay_sensitive})

@@ -43,17 +43,17 @@ class Counter(object):
         """
         # node revenue
         v_net_node_revenue = 0
-        for nid in solution['node_slots'].keys():
+        for nid in solution['node_slots']:
             v_net_node_revenue += sum([v_net.nodes[nid][n_attr.name] for n_attr in self.node_resource_attrs])
         v_net_link_revenue = 0
         v_net_link_cost = 0
         # link revenue
-        for v_link, p_links in solution['link_paths'].items():
-            one_revenue = sum([v_net.links[v_link][l_attr.name] for l_attr in self.link_resource_attrs])
-            v_net_link_revenue += one_revenue
-            if len(p_links) == 0:
-                continue
-            else:
+        if solution['link_paths'] is not None:
+            for v_link, p_links in solution['link_paths'].items():
+                one_revenue = sum([v_net.links[v_link][l_attr.name] for l_attr in self.link_resource_attrs])
+                v_net_link_revenue += one_revenue
+                if len(p_links) == 0:
+                    continue
                 one_cost = 0
                 for p_link in p_links:
                     one_cost += sum([solution['link_paths_info'][(v_link, p_link)][l_attr.name] for l_attr in self.link_resource_attrs])
@@ -85,7 +85,7 @@ class Counter(object):
         solution['num_routed_links'] = len(solution.link_paths) 
         solution['v_net_node_demand'] = self.calculate_sum_node_resource(v_net) / self.num_node_resource_attrs  # normalize
         solution['v_net_link_demand'] = self.calculate_sum_link_resource(v_net)
-        solution['v_net_demand'] = solution['v_net_node_demand'] + solution['v_net_demand']
+        solution['v_net_demand'] = solution['v_net_node_demand'] + solution['v_net_link_demand']
         # Success
         if solution['result']:
             solution['place_result'] = True
@@ -112,33 +112,7 @@ class Counter(object):
         solution['v_net_time_revenue'] = solution['v_net_revenue'] * v_net.lifetime
         solution['v_net_time_cost'] = solution['v_net_cost'] * v_net.lifetime
         solution['v_net_time_rc_ratio'] = solution['v_net_r2c_ratio'] * v_net.lifetime
-        self._count_rdma_solution_metrics(v_net, solution)
         return solution.to_dict()
-
-    def _count_rdma_solution_metrics(self, v_net: VirtualNetwork, solution: Solution) -> None:
-        rdma_z = solution.get('rdma_z', {}) or {}
-        rdma_penalties = solution.get('rdma_path_penalty', {}) or {}
-        offload_count = int(sum(1 for z in rdma_z.values() if int(z) == 1))
-        fallback_count = int(sum(1 for z in rdma_z.values() if int(z) == 0))
-
-        ehpc = 0.0
-        delay_penalty = 0.0
-        for v_link, z in rdma_z.items():
-            if v_link not in v_net.links:
-                continue
-            link_data = v_net.links[v_link]
-            if int(z) == 1:
-                traffic_type = int(link_data.get('traffic_type', 2))
-                traffic_weights = {1: 1.0, 2: 0.6, 3: 0.2}
-                ehpc += float(link_data.get('m', 0)) * traffic_weights.get(traffic_type, 0.6)
-            else:
-                delay_penalty += float(link_data.get('d', 0))
-
-        solution['v_net_ehpc'] = float(ehpc)
-        solution['v_net_crossrack_cost'] = float(sum(float(v) for v in rdma_penalties.values()))
-        solution['v_net_delay_penalty'] = float(delay_penalty)
-        solution['v_net_fallback_count'] = fallback_count
-        solution['v_net_rdma_offload_count'] = offload_count
 
     def calculate_sum_network_resource(self, network: BaseNetwork, node: bool = True, link: bool = True):
         """
@@ -211,10 +185,13 @@ class Counter(object):
             raise TypeError
         summary_info = {}
         # key
-        summary_info['acceptance_rate'] = records.iloc[-1]['success_count'] / records.iloc[-1]['v_net_count']
+        def _safe_div(numerator, denominator):
+            return numerator / denominator if denominator != 0 else 0
+
+        summary_info['acceptance_rate'] = _safe_div(records.iloc[-1]['success_count'], records.iloc[-1]['v_net_count'])
         summary_info['avg_r2c_ratio'] = records.loc[records['event_type']==1, 'v_net_r2c_ratio'].mean()
-        summary_info['long_term_time_r2c_ratio'] = records.iloc[-1]['total_time_revenue'] / records.iloc[-1]['total_time_cost']
-        summary_info['long_term_avg_time_revenue'] = records.iloc[-1]['total_time_revenue'] / records.iloc[-1]['v_net_arrival_time']
+        summary_info['long_term_time_r2c_ratio'] = _safe_div(records.iloc[-1]['total_time_revenue'], records.iloc[-1]['total_time_cost'])
+        summary_info['long_term_avg_time_revenue'] = _safe_div(records.iloc[-1]['total_time_revenue'], records.iloc[-1]['v_net_arrival_time'])
         # ac rate
         summary_info['success_count'] = records.iloc[-1]['success_count']
         summary_info['early_rejection_count'] = ((records['event_type']==1) & (records['early_rejection']==True)).sum()
@@ -225,11 +202,11 @@ class Counter(object):
         summary_info['total_revenue'] = records.iloc[-1]['total_revenue']
         summary_info['total_time_revenue'] = records.iloc[-1]['total_time_revenue']
         summary_info['total_time_cost'] = records.iloc[-1]['total_time_cost']
-        summary_info['long_term_r2c_ratio'] = summary_info['total_revenue'] / summary_info['total_cost']
+        summary_info['long_term_r2c_ratio'] = _safe_div(summary_info['total_revenue'], summary_info['total_cost'])
         # revenue / cost
         summary_info['total_simulation_time'] = records.iloc[-1]['v_net_arrival_time']
-        summary_info['long_term_avg_revenue'] = summary_info['total_revenue'] / summary_info['total_simulation_time']
-        summary_info['long_term_avg_cost'] = summary_info['total_cost'] / summary_info['total_simulation_time']
+        summary_info['long_term_avg_revenue'] = _safe_div(summary_info['total_revenue'], summary_info['total_simulation_time'])
+        summary_info['long_term_avg_cost'] = _safe_div(summary_info['total_cost'], summary_info['total_simulation_time'])
         # summary_info['long_term_weighted_avg_time_revenue'] = self.revenue_service_time_weight * summary_info['long_term_avg_time_revenue'] + self.revenue_start_price_weight * summary_info['long_term_avg_revenue']
         # summary_info['total_simulation_time'] = records[records['event_type']==1].iloc[-1]['arrival_time']
         # state
@@ -244,15 +221,6 @@ class Counter(object):
             summary_info['avg_reward'] = records.loc[records['event_type']==1, 'v_net_reward'].mean()
         else:
             summary_info['avg_reward'] = 0
-        enter_records = records.loc[records['event_type'] == 1]
-        summary_info['total_ehpc'] = enter_records['v_net_ehpc'].sum() if 'v_net_ehpc' in records.columns else 0.0
-        summary_info['total_crossrack_cost'] = enter_records['v_net_crossrack_cost'].sum() if 'v_net_crossrack_cost' in records.columns else 0.0
-        summary_info['total_delay_penalty'] = enter_records['v_net_delay_penalty'].sum() if 'v_net_delay_penalty' in records.columns else 0.0
-        summary_info['total_fallback_count'] = enter_records['v_net_fallback_count'].sum() if 'v_net_fallback_count' in records.columns else 0
-        if len(enter_records) == 0:
-            summary_info['fallback_rate'] = 0.0
-        else:
-            summary_info['fallback_rate'] = float(summary_info['total_fallback_count']) / float(len(enter_records))
         return summary_info
 
     @classmethod

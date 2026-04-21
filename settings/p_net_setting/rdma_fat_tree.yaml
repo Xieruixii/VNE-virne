@@ -1,0 +1,63 @@
+# settings/p_net_setting/rdma_fat_tree.yaml
+
+topology:
+  type: 'fat_tree'
+  k: 8
+
+node_attrs_setting:
+  - name: 'cpu'
+    type: 'resource'
+    distribution: 'uniform'
+    low: 50
+    high: 100
+
+  # RDMA 能力：0/1
+  - name: 'rdma_capable'
+    type: 'constraint'
+    distribution: 'bernoulli'
+    p: 0.5
+    value_if_true: 1
+    value_if_false: 0
+
+  # NIC 可用卸载槽位
+  - name: 'nic_slots'
+    type: 'resource'
+    distribution: 'uniform'
+    low: 4
+    high: 16
+
+  # 可选：QP 预算
+  - name: 'qp_budget'
+    type: 'resource'
+    distribution: 'uniform'
+    low: 16
+    high: 64
+
+  # 机架编号
+  - name: 'rack_id'
+    type: 'constraint'
+    distribution: 'custom'
+    method: 'by_topology'
+
+link_attrs_setting:
+  - name: 'bw'
+    type: 'resource'
+    distribution: 'uniform'
+    low: 50
+    high: 100
+
+  - name: 'latency'
+    type: 'constraint'
+    distribution: 'uniform'
+    low: 1
+    high: 5
+
+  # 该物理链路是否允许作为 RDMA 路径边
+  - name: 'rdma_link'
+    type: 'constraint'
+    distribution: 'bernoulli'
+    p: 0.5
+    value_if_true: 1
+    value_if_false: 0
+
+graph_attrs_setting: []

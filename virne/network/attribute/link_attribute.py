@@ -74,13 +74,13 @@ class LinkStatusAttribute(InformationAttributeMethod, LinkAttribute):
         super().__init__(name, 'link', 'status', **config, **kwargs)
 
 
-class LinkInfoAttribute(InformationAttributeMethod, LinkAttribute):
+class LinkInformationAttribute(InformationAttributeMethod, LinkAttribute):
     """
-    Generic link information attribute (e.g., scores, traffic metadata).
+    Link information attribute that can be generated but is not a resource constraint.
     """
     def __init__(self, name: str, config: Optional[dict] = None, **kwargs):
         config = config or {}
-        super().__init__(name, 'link', 'info', **config, **kwargs)
+        super().__init__(name, 'link', 'information', **config, **kwargs)
 
 
 class LinkExtremaAttribute(ExtremaAttributeMethod, InformationAttributeMethod, LinkAttribute):
