@@ -36,7 +36,7 @@ class RDMARankSolver(BaseNodeRankSolver):
       - flow_type
       - latency         : optional latency demand
     """
-
+    DEFAULT_ABLATION_MODE = "full"
     def __init__(self, controller, recorder, counter, logger, config, **kwargs):
         super().__init__(controller, recorder, counter, logger, config, **kwargs)
 
@@ -64,10 +64,28 @@ class RDMARankSolver(BaseNodeRankSolver):
         # new strategy params
         self.rdma_margin = getattr(config.solver, "rdma_margin", 1.0)
         self.lambda_nic_scarcity = getattr(config.solver, "lambda_nic_scarcity", 1.0)
-        self.lambda_slack = getattr(config.solver, "lambda_slack", 0.05)
+        # self.lambda_slack = getattr(config.solver, "lambda_slack", 0.1)
+        self.lambda_slack = getattr(config.solver, "lambda_slack", 0.10)
+        self.lambda_path_slack = getattr(config.solver, "lambda_path_slack", 0.05)
 
-        self.node_rdma_aware = True
-        self.mode_policy = "opportunistic"   # opportunistic | always | disabled
+        # self.node_rdma_aware = True
+        # self.mode_policy = "opportunistic"   # opportunistic | always | disabled
+        # =========================
+        # Ablation settings
+        # =========================
+        self.ablation_mode = getattr(
+            config.solver,
+            "ablation_mode",
+            None
+        )
+
+        if self.ablation_mode is None:
+            self.ablation_mode = kwargs.get(
+                "ablation_mode",
+                self.DEFAULT_ABLATION_MODE
+            )
+
+        self._apply_ablation_mode()
 
 
     # ============================================================
@@ -80,6 +98,53 @@ class RDMARankSolver(BaseNodeRankSolver):
         if g.has_edge(v, u):
             return g.edges[v, u]
         return {}
+
+    def _apply_ablation_mode(self) -> None:
+        valid_modes = {
+            "full",
+            "wo_node_rdma",
+            "wo_link_rdma",
+            "wo_traffic_type",
+            "wo_rdma_tcp_selection",
+            "wo_nic_scarcity",
+            "wo_slack",
+            "wo_all_rdma",
+        }
+        if self.ablation_mode not in valid_modes:
+            raise ValueError(
+                f"Unknown ablation_mode={self.ablation_mode}. "
+                f"Valid modes are: {sorted(valid_modes)}"
+            )
+
+        self.use_node_rdma = self.ablation_mode not in {
+            "wo_node_rdma",
+            "wo_all_rdma",
+        }
+        self.use_link_rdma = self.ablation_mode not in {
+            "wo_link_rdma",
+            "wo_all_rdma",
+        }
+        self.use_traffic_type = self.ablation_mode not in {
+            "wo_traffic_type",
+            "wo_all_rdma",
+        }
+        self.use_rdma_tcp_selection = self.ablation_mode not in {
+            "wo_rdma_tcp_selection",
+            "wo_all_rdma",
+        }
+        self.use_nic_scarcity = self.ablation_mode not in {
+            "wo_nic_scarcity",
+            "wo_all_rdma",
+        }
+        self.use_slack = self.ablation_mode not in {
+            "wo_slack",
+            "wo_all_rdma",
+        }
+
+        self.node_rdma_aware = self.use_node_rdma
+        self.mode_policy = (
+            "opportunistic" if self.use_rdma_tcp_selection else "disabled"
+        )
 
     def _node_attr(self, g, n, key, default=0):
         return g.nodes[n].get(key, default)
@@ -144,6 +209,9 @@ class RDMARankSolver(BaseNodeRankSolver):
 
     def _rdma_subgraph(self, p_net):
         g = nx.DiGraph() if p_net.is_directed() else nx.Graph()
+
+        if not self.use_link_rdma:
+            return g
 
         for n in p_net.nodes:
             if self._is_rdma_node(p_net, n):
@@ -295,6 +363,11 @@ class RDMARankSolver(BaseNodeRankSolver):
         msg_rate = float(self._link_attr(v_net, v_link, "msg_rate", 0.0))
         delay_sensitive = int(self._link_attr(v_net, v_link, "delay_sensitive", 0))
         flow_type = self._link_attr(v_net, v_link, "flow_type", 0)
+
+        if not self.use_traffic_type:
+            msg_rate = 0.0
+            delay_sensitive = 0
+            flow_type = 0
 
         flow_bias = 0.0
         if flow_type in [1, "Type-1", "interactive"]:
@@ -464,7 +537,7 @@ class RDMARankSolver(BaseNodeRankSolver):
                     )
 
                     # RDMA bonus only if a real fast RDMA path exists
-                    if self.node_rdma_aware and self._is_rdma_node(p_net, p_node_id) and self._is_rdma_node(p_net, p_nb):
+                    if self.node_rdma_aware and self.use_link_rdma and self._is_rdma_node(p_net, p_node_id) and self._is_rdma_node(p_net, p_nb):
                         fast_rdma_path = self._choose_fast_path(
                             p_net=p_net,
                             src=p_node_id,
@@ -481,10 +554,10 @@ class RDMARankSolver(BaseNodeRankSolver):
 
                 score = (
                     1.0 * base_score
-                    + 0.6 * nic_bonus
-                    + 0.8 * rdma_bonus
+                    + 0.2 * nic_bonus
+                    + 0.3 * rdma_bonus
                     + 2.5 * feasible_neighbor_count
-                    + 0.15 * rdma_gain_bonus
+                    + 0.10 * rdma_gain_bonus
                     - 1.0 * projected_cost
                 )
 
@@ -721,7 +794,7 @@ class RDMARankSolver(BaseNodeRankSolver):
             2.0 * lat
             + 2.0 * cross
             + 1.0 * hops
-            - 0.03 * bw_slack
+            - self.lambda_path_slack * bw_slack
         )
         if prefer_rdma:
             score -= 1.0
@@ -769,6 +842,9 @@ class RDMARankSolver(BaseNodeRankSolver):
                 "score": tcp_score,
                 "utility": utility,
             })
+        
+        if (not self.use_rdma_tcp_selection) or (not self.use_link_rdma):
+            return candidates
 
         # RDMA candidate
         eligible = (
@@ -810,17 +886,56 @@ class RDMARankSolver(BaseNodeRankSolver):
 
         return candidates
     
+
+    
 @SolverRegistry.register(solver_name='vanilla_vne', solver_type='node_ranking')
 class VanillaVNESolver(RDMARankSolver):
+    DEFAULT_ABLATION_MODE = "wo_all_rdma"
+
     def __init__(self, controller, recorder, counter, logger, config, **kwargs):
         super().__init__(controller, recorder, counter, logger, config, **kwargs)
         self.node_rdma_aware = False
         self.mode_policy = "disabled"
 
-
 @SolverRegistry.register(solver_name='always_offload_if_eligible', solver_type='node_ranking')
 class AlwaysOffloadIfEligibleSolver(RDMARankSolver):
+    DEFAULT_ABLATION_MODE = "full"
+
     def __init__(self, controller, recorder, counter, logger, config, **kwargs):
         super().__init__(controller, recorder, counter, logger, config, **kwargs)
         self.node_rdma_aware = True
         self.mode_policy = "always"
+
+@SolverRegistry.register(solver_name='rdma_rank_wo_node_rdma', solver_type='node_ranking')
+class RDMARankWoNodeRDMASolver(RDMARankSolver):
+    DEFAULT_ABLATION_MODE = "wo_node_rdma"
+
+
+@SolverRegistry.register(solver_name='rdma_rank_wo_link_rdma', solver_type='node_ranking')
+class RDMARankWoLinkRDMASolver(RDMARankSolver):
+    DEFAULT_ABLATION_MODE = "wo_link_rdma"
+
+
+@SolverRegistry.register(solver_name='rdma_rank_wo_traffic_type', solver_type='node_ranking')
+class RDMARankWoTrafficTypeSolver(RDMARankSolver):
+    DEFAULT_ABLATION_MODE = "wo_traffic_type"
+
+
+@SolverRegistry.register(solver_name='rdma_rank_wo_rdma_tcp_selection', solver_type='node_ranking')
+class RDMARankWoRDMATCPSelectionSolver(RDMARankSolver):
+    DEFAULT_ABLATION_MODE = "wo_rdma_tcp_selection"
+
+
+@SolverRegistry.register(solver_name='rdma_rank_wo_nic_scarcity', solver_type='node_ranking')
+class RDMARankWoNICScarcitySolver(RDMARankSolver):
+    DEFAULT_ABLATION_MODE = "wo_nic_scarcity"
+
+
+@SolverRegistry.register(solver_name='rdma_rank_wo_slack', solver_type='node_ranking')
+class RDMARankWoSlackSolver(RDMARankSolver):
+    DEFAULT_ABLATION_MODE = "wo_slack"
+
+
+@SolverRegistry.register(solver_name='rdma_rank_wo_all_rdma', solver_type='node_ranking')
+class RDMARankWoAllRDMASolver(RDMARankSolver):
+    DEFAULT_ABLATION_MODE = "wo_all_rdma"
